@@ -1,7 +1,6 @@
 from rest_framework import viewsets
 
-from core import models
-from core import serializers
+from core import models, serializers
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -13,6 +12,7 @@ class CollectionViewSet(viewsets.ModelViewSet):
 
 class PostcardViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.PostcardSerializer
+    filter_fields = ['collections']
 
     def get_queryset(self):
         return models.Postcard.objects.filter(

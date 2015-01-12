@@ -24,7 +24,7 @@ class Collection(models.Model):
 
 class Postcard(models.Model):
     collections = models.ManyToManyField('Collection')
-    image_face = models.FileField()
+    image_face = models.FileField(blank=True, null=True)
     image_back = models.FileField(blank=True, null=True)
     received = models.DateTimeField()
     name = models.CharField(max_length=MAX_NAME_LENGTH, blank=True, null=True)

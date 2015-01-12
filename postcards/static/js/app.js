@@ -1,84 +1,75 @@
+var app = window.app || {};
+app = $.extend(app, {
+	views: {},
+	models: {},
+	loadTemplates: function(views, callback) {
+		var deffereds = [];
+
+		$.each(views, function(index, view) {
+			if (app[view]) {
+				deffereds.push($.get(app.config.staticUrl + 'tpl/' + view + '.html', function(data) {
+					app[view].prototype.template = _.template(data);
+				}, 'html'));
+			}
+			else {
+				console.log('ERROR: view ' + view + ' now found.');
+			}
+		});
+
+		$.when.apply(null, deffereds).done(callback);
+	}
+});
+
+app.Router = Backbone.Router.extend({
+	routes: {
+		'': 'index',
+		'collection/*ids': 'postcard'
+	},
+	initialize: function() {
+		app.navView = new app.NavView();
+		$('body').html(app.navView.render().el);
+		this.$collectionTree = $('.collection-tree');
+		this.$postcard = $('.postcard');
+
+		this.renderCollectionTree();
+	},
+	renderCollectionTree: function() {
+		if (!app.collectionCollection) {
+			app.collectionCollection = new app.CollectionCollection();
+		}
+		if (!app.collectionListView) {
+			app.collectionListView = new app.CollectionListView({model: app.collectionCollection});
+		}
+		var that = this;
+		app.collectionCollection.fetch({
+			success: function() {
+				that.$collectionTree.html(app.collectionListView.render().el);
+			}
+		});
+	},
+	index: function() {
+		console.log('ROUTER: index');
+		app.navView.selectMenuItem();
+	},
+	postcard: function(ids) {
+		console.log('ROUTER: postcard ids ' + ids);
+		if (!app.postcardCollection) {
+			app.postcardCollection = new app.PostcardCollection();
+		}
+		if (!app.postcardListView) {
+			app.postcardListView = new app.PostcardListView({model: app.postcardCollection});
+		}
+		var that = this;
+		app.postcardCollection.requestParams.collections = ids;
+		app.postcardCollection.fetch({
+			success: function() {
+				that.$postcard.html(app.postcardListView.render().el);
+			}
+		});
+	}
+});
+
 $(document).ready(function() {
-	app = {};
-
-	app.CollectionModel = Backbone.Model.extend();
-	app.CollectionList = Backbone.Collection.extend({
-		model: app.CollectionModel,
-		url: Urls['collection-list'],
-		initialize: function() {
-			console.log('Initializing CollectionList');
-			this.fetch();
-		}
-	});
-
-	app.collectionList = new app.CollectionList();
-
-	app.CollectionView = Backbone.View.extend({
-		tagName: 'div',
-		template: _.template($('.js-template-collection').html()),
-		render: function() {
-			var data = this.model.toJSON();
-			console.log('data: ' + JSON.stringify(data));
-			this.$el.html(this.template(data));
-			return this;
-		}
-	});
-
-	app.AppView = Backbone.View.extend({
-		el: '#container',
-		initialize: function() {
-			app.collectionList.on('add', this.addOne, this);
-		},
-		events: {
-			'submit .collection-form': 'addCollection'
-		},
-		addOne: function(collection) {
-			var view = new app.CollectionView({model: collection});
-			this.$el.append(view.render().el);
-			return this;
-		},
-		renderForm: function() {
-			this.$el.append('<form class="collection-form"> <input name="name" placeholder="name" /> <input name="parent" placeholder="parent" /> <input type="submit" /> </form>');
-		},
-		clear: function() {
-			this.$el.html('');
-			this.renderForm();
-			return this;
-		},
-		render: function() {
-			console.log('rendering');
-			this.clear();
-			app.collectionList.fetch();
-			app.collectionList.each(this.addOne, this);
-			return this;
-		},
-		addCollection: function(e) {
-			e.preventDefault();
-			var data = {};
-			$(e.target).serializeArray().map(function(x) {
-				data[x.name] = x.value;
-			});
-			console.log('addCollection: '+ JSON.stringify(data));
-			app.collectionList.create(data, {wait: true});
-			return this;
-		}
-	});
-
-	app.appView = new app.AppView();
-
-	app.Router = Backbone.Router.extend({
-		routes: {
-			'': 'index',
-			'collection': 'index',
-		},
-		index: function() {
-			app.appView.render();
-		}
-	});
-
-	app.router = new app.Router();
-	Backbone.history.start();
-
 	function csrfSafeMethod(method) {
 	    // these HTTP methods do not require CSRF protection
 	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
@@ -91,4 +82,11 @@ $(document).ready(function() {
 	        }
 	    }
 	});
+
+	app.loadTemplates(
+		['NavView', 'CollectionListItemView', 'PostcardListItemView'],
+		function() {
+			app.router = new app.Router();
+			Backbone.history.start();
+		});
 });
