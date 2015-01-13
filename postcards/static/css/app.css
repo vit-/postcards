@@ -1,3 +1,7 @@
 body {
 	padding-top: 100px;
 }
+
+.js-collection-form label {
+	display: none;
+}
